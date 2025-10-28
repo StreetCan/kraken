@@ -21,7 +21,11 @@ const Index = () => {
         </div>
       </main>
 
-     
+     <footer className="mt-8 max-w-[1700px] mx-auto px-4">
+        <div className="bg-card dark:bg-card rounded-lg shadow-sm p-4">
+          <rick />
+        </div>
+      </footer>
     </div>
   );
 };

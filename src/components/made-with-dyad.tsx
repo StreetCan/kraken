@@ -1,4 +1,4 @@
-export const MadeWithDyad = () => {
+export const rick = () => {
   return (
     <div className="p-4 text-center">
       <a
@@ -12,4 +12,5 @@ export const MadeWithDyad = () => {
     </div>
   );
 };
+
 

@@ -1,4 +1,4 @@
-export const rick = () => {
+export const Rick = () => {
   return (
     <div className="p-4 text-center">
       <a
@@ -12,5 +12,6 @@ export const rick = () => {
     </div>
   );
 };
+
 
 

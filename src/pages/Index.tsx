@@ -1,5 +1,5 @@
 import ModuleList from "@/components/ModuleList";
-import { MadeWithDyad } from "@/components/made-with-dyad";
+import { rick } from "@/components/made-with-dyad";
 
 const Index = () => {
   return (

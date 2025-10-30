@@ -25,7 +25,7 @@ const Header: React.FC = () => {
       <div className="max-w-[1700px] mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/" className="text-lg font-semibold">
-            Kraken Preview Button Wrap
+            Kraken 0.9
           </Link>
         </div>
 

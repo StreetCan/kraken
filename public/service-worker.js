@@ -1,6 +1,6 @@
 const CACHE_NAME = "whispering-kraken-cache-v1";
 const OFFLINE_URL = "/offline.html";
-const PRECACHE_URLS = ["/", OFFLINE_URL, "/manifest.webmanifest"];
+const PRECACHE_URLS = ["/", OFFLINE_URL, "/manifest.webmanifest", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

@@ -357,9 +357,12 @@ const ModulePage: React.FC = () => {
                         // compute folder grade for display
                         const folderGrade = isFolder ? computeFolderGrade(t) : t.grade;
                         return (
-                          <div key={t.id} className={`py-2 flex items-start gap-3 ${t.excluded ? "opacity-50 grayscale" : ""}`}>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
+                          <div
+                            key={t.id}
+                            className={`py-2 flex flex-wrap items-start gap-3 md:flex-nowrap ${t.excluded ? "opacity-50 grayscale" : ""}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                   <div className="font-medium">{t.name}</div>
                                   <div className="text-sm text-muted-foreground mt-1">
@@ -433,7 +436,7 @@ const ModulePage: React.FC = () => {
                             </div>
 
                             {/* actions for top-level tasks and folders */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
                               {!isFolder ? (
                                 <>
                                   {!isA2 ? (

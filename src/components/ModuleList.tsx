@@ -61,18 +61,21 @@ const ModuleList: React.FC = () => {
 
   return (
     <div className="max-w-[1700px] mx-auto w-full p-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h2 className="text-2xl font-bold">Your Modules</h2>
-        <form onSubmit={handleAdd} className="flex items-center gap-2">
+        <form
+          onSubmit={handleAdd}
+          className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
+        >
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="New module name"
-            className="px-3 py-2 border rounded-md bg-input text-sm text-foreground"
+            className="w-full rounded-md border bg-input px-3 py-2 text-sm text-foreground sm:w-64"
           />
           <button
             type="submit"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground dark:bg-slate-700 dark:text-white px-3 py-2 rounded-md text-sm"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground dark:bg-slate-700 dark:text-white sm:w-auto sm:flex-none"
           >
             <Plus size={16} /> Add
           </button>

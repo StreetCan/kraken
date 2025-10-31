@@ -1,8 +1,8 @@
 # Kraken PWA icons
 
-Place your PNG icons in this directory using the filenames referenced in the manifest and home screen metadata:
+Place your PNG icons in this directory using the filenames referenced in the manifest:
 
-- `kraken-180.png` (also used as the `apple-touch-icon`)
+- `kraken-180.png`
 - `kraken-192.png`
 - `kraken-512.png`
 

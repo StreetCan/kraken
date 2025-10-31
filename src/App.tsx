@@ -2,6 +2,7 @@
 
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, useNavigate } from "react-router-dom";
+import { Github } from "lucide-react";
 import Index from "@/pages/Index";
 import ModulePage from "@/pages/Module";
 import DarkModeToggle from "@/components/DarkModeToggle";
@@ -55,6 +56,24 @@ const Header: React.FC = () => {
   );
 };
 
+const Footer: React.FC = () => {
+  return (
+    <footer className="w-full border-t dark:border-t-border/20 bg-white dark:bg-background">
+      <div className="max-w-[1700px] mx-auto px-4 py-6 flex items-center justify-center">
+        <a
+          href="https://github.com/streetcan/kraken"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Github className="h-4 w-4" aria-hidden="true" />
+          <span className="font-medium">Kraken Github</span>
+        </a>
+      </div>
+    </footer>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
@@ -69,6 +88,7 @@ const App: React.FC = () => {
               <Route path="*" element={<Index />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </SessionProvider>
     </BrowserRouter>

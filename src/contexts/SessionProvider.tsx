@@ -40,7 +40,12 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+    setSession(null);
+    setUser(null);
   };
 
   // Always render the context provider so the component tree and hook order remain stable.

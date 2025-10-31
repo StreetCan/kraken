@@ -15,9 +15,14 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
-    showSuccess("Signed out");
-    navigate("/");
+    try {
+      await signOut();
+      showSuccess("Signed out");
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to sign out", error);
+      showError("Failed to sign out. Please try again.");
+    }
   };
 
   return (

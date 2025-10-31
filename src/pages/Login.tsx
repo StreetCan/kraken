@@ -25,6 +25,18 @@ const Login: React.FC = () => {
   }, [navigate]);
 
   React.useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && session) {
+        navigate("/", { replace: true });
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  React.useEffect(() => {
     // Listen for changes to the root element's class list so we can toggle Auth theme/live text color.
     const root = typeof document !== "undefined" ? document.documentElement : null;
     if (!root) return;

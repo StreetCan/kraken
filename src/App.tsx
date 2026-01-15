@@ -8,6 +8,7 @@ import ModulePage from "@/pages/Module";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import { SessionProvider, useSession } from "@/contexts/SessionProvider";
 import Login from "@/pages/Login";
+import Pwa from "@/pages/Pwa";
 import { showSuccess, showError } from "@/utils/toast";
 
 const Header: React.FC = () => {
@@ -59,7 +60,7 @@ const Header: React.FC = () => {
 const Footer: React.FC = () => {
   return (
     <footer className="w-full border-t dark:border-t-border/20 bg-white dark:bg-background">
-      <div className="max-w-[1700px] mx-auto px-4 py-6 flex items-center justify-center">
+      <div className="max-w-[1700px] mx-auto px-4 py-6 flex items-center justify-center gap-6">
         <a
           href="https://github.com/streetcan/kraken"
           target="_blank"
@@ -69,6 +70,12 @@ const Footer: React.FC = () => {
           <Github className="h-4 w-4" aria-hidden="true" />
           <span className="font-medium">Kraken Github</span>
         </a>
+        <Link
+          to="/pwa"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+        >
+          PWA
+        </Link>
       </div>
     </footer>
   );
@@ -85,6 +92,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/module/:id" element={<ModulePage />} />
+              <Route path="/pwa" element={<Pwa />} />
               <Route path="*" element={<Index />} />
             </Routes>
           </main>

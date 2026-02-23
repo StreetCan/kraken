@@ -6,6 +6,7 @@ import ContributionPieChart from "@/components/ContributionPieChart";
 import SmallMetricPie from "@/components/SmallMetricPie";
 import { ArrowLeft, Trash2, Plus } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import ModulePageSkeleton from "@/components/ModulePageSkeleton.tsx";
 
 const COLORS = [
   "#6366f1", // indigo-500
@@ -22,6 +23,7 @@ const ModulePage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
+    modulesLoading,
     getModule,
     addTask,
     updateTask,
@@ -189,15 +191,17 @@ const ModulePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      {!module ? (
-        <div className="max-w-[1700px] mx-auto flex items-center justify-center p-8 bg-card rounded shadow">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-4">Module not found</h2>
-            <Link to="/" className="text-blue-500 hover:underline">
-              Back to Home
-            </Link>
+      {!id || (!modulesLoading && !module) ? (
+          <div className="max-w-[1700px] mx-auto flex items-center justify-center p-8 bg-card rounded shadow">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-4">Module not found</h2>
+              <Link to="/" className="text-blue-500 hover:underline">
+                Back to Home
+              </Link>
+            </div>
           </div>
-        </div>
+      ) : modulesLoading && !module ? (
+          <ModulePageSkeleton />
       ) : (
         <div className="max-w-[1700px] mx-auto">
           <div className="flex items-center gap-4 mb-6">

@@ -81,6 +81,7 @@ export function useModules() {
 
   // Start empty so unauthenticated users don't briefly see local modules.
   const [modules, setModules] = React.useState<ModuleItem[]>(() => []);
+  const [modulesLoading, setModulesLoading] = React.useState(false);
   const mountedRef = React.useRef(true);
 
   React.useEffect(() => {
@@ -101,15 +102,17 @@ export function useModules() {
   function normalizeRemoteData(data: any[]): ModuleItem[] {
     return (data || []).map((m) => {
       const rawTasks: { id: string; name: string; grade: number; weight: number }[] =
-        (m.tasks || []).map((t: any) => ({
-          id: String(t.id),
-          name: String(t.name ?? ""),
-          grade: Number(t.grade ?? 0),
-          weight: Number(t.weight ?? 0),
-        }));
+          (m.tasks || []).map((t: any) => ({
+            id: String(t.id),
+            name: String(t.name ?? ""),
+            grade: Number(t.grade ?? 0),
+            weight: Number(t.weight ?? 0),
+          }));
 
-      // Separate child-rows that were stored as "FolderName / ChildName"
-      const childrenGroups: Record<string, { id: string; childName: string; grade: number; weight: number }[]> = {};
+      const childrenGroups: Record<
+          string,
+          { id: string; childName: string; grade: number; weight: number }[]
+      > = {};
       const remainingById = new Map<string, { id: string; name: string; grade: number; weight: number }>();
 
       for (const t of rawTasks) {
@@ -131,14 +134,10 @@ export function useModules() {
 
       const tasksOut: Task[] = [];
 
-      // For each grouped folderName, try to find a parent row with name === folderName.
-      // If found, treat that row as the folder and nest children under it.
-      // If not found, synthesize a folder so client still shows indentation.
       for (const folderName of Object.keys(childrenGroups)) {
         const parentEntry = Array.from(remainingById.values()).find((r) => r.name === folderName);
 
         if (parentEntry) {
-          // Use the parent's id & weight for the folder row
           const childrenTasks: Task[] = childrenGroups[folderName].map((c) => ({
             id: c.id,
             name: c.childName,
@@ -159,11 +158,8 @@ export function useModules() {
             children: childrenTasks,
           });
 
-          // remove the parent from remaining so it's not added as a normal task
           remainingById.delete(parentEntry.id);
         } else {
-          // No explicit parent row present on server: create a synthetic folder so UI remains nested.
-          // Keep children IDs intact (these are server rows), and give the synthetic folder a deterministic id.
           const syntheticId = `f-import-${String(m.id)}-${folderName}`;
           const childrenTasks: Task[] = childrenGroups[folderName].map((c) => ({
             id: c.id,
@@ -187,7 +183,6 @@ export function useModules() {
         }
       }
 
-      // Remaining rows that were not folded into folders become normal top-level tasks.
       for (const r of remainingById.values()) {
         tasksOut.push({
           id: r.id,
@@ -211,59 +206,60 @@ export function useModules() {
   // On user sign-in: fetch remote modules. If remote empty and local exists, import local->remote.
   React.useEffect(() => {
     let active = true;
+
     const load = async () => {
       if (!user) {
-        // When signed out: clear in-memory modules so the UI does not show them.
         if (active) {
           setModules([]);
+          setModulesLoading(false);
         }
         return;
       }
 
-      // Fetch modules with nested tasks
+      if (active) setModulesLoading(true);
+
       const { data, error } = await supabase
-        .from("modules")
-        .select("id, name, created_at, tasks(id, name, grade, weight, created_at)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+          .from("modules")
+          .select("id, name, created_at, tasks(id, name, grade, weight, created_at)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
       if (error) {
         showError("Failed to load modules from account");
-        // fall back to local cache
         const local = readStorage();
         if (active) setModules(local);
+        if (active) setModulesLoading(false);
         return;
       }
 
       const remoteModules = normalizeRemoteData(data || []);
 
-      // If remote is empty and local has modules, import local => server (existing behavior)
-      if ((remoteModules.length === 0 || remoteModules.every((m) => m.tasks.length === 0)) && active) {
+      if (remoteModules.length === 0 || remoteModules.every((m) => m.tasks.length === 0)) {
         const local = readStorage();
+
         if (local.length > 0) {
-          // Upload local modules and their tasks (only top-level tasks; nested folders are not synced)
           for (const lm of local) {
-            // Insert module
-            const { error: me } = await supabase.from("modules").insert([{ id: lm.id, user_id: user.id, name: lm.name }]);
+            const { error: me } = await supabase
+                .from("modules")
+                .insert([{ id: lm.id, user_id: user.id, name: lm.name }]);
+
             if (me) {
               showError("Failed to upload local modules to account");
               continue;
             }
-            // Insert tasks if any (only flat tasks and folder children as separate tasks are uploaded — nested folder support is kept client-side)
+
             const tasksToInsert: any[] = [];
             for (const t of lm.tasks) {
               if (t.isFolder && t.children && t.children.length > 0) {
-                // Upload each child as a separate task under the module (this keeps server schema compatible)
                 for (const c of t.children) {
                   tasksToInsert.push({
                     id: c.id,
                     module_id: lm.id,
-                    name: `${t.name} / ${c.name}`, // make relationship visible on server
+                    name: `${t.name} / ${c.name}`,
                     grade: c.grade,
                     weight: c.weight,
                   });
                 }
-                // Also upload the folder as a task row so server has a representation (with folder weight)
                 tasksToInsert.push({
                   id: t.id,
                   module_id: lm.id,
@@ -281,25 +277,24 @@ export function useModules() {
                 });
               }
             }
+
             if (tasksToInsert.length > 0) {
               const { error: te } = await supabase.from("tasks").insert(tasksToInsert);
-              if (te) {
-                showError("Failed to upload some tasks to account");
-              }
+              if (te) showError("Failed to upload some tasks to account");
             }
           }
 
-          // Re-fetch after upload
           const { data: data2, error: err2 } = await supabase
-            .from("modules")
-            .select("id, name, created_at, tasks(id, name, grade, weight, created_at)")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
+              .from("modules")
+              .select("id, name, created_at, tasks(id, name, grade, weight, created_at)")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false });
 
           if (err2) {
             showError("Failed to load modules after import");
             const localAgain = readStorage();
             if (active) setModules(localAgain);
+            if (active) setModulesLoading(false);
             return;
           }
 
@@ -308,13 +303,13 @@ export function useModules() {
             setModules(imported);
             writeStorage(imported);
             showSuccess("Imported local modules to your account");
+            setModulesLoading(false);
           }
           return;
         }
       }
 
       if (active) {
-        // Merge local folders (and their children) back into remote modules so client-side folders persist.
         try {
           const local = readStorage();
 
@@ -322,14 +317,12 @@ export function useModules() {
             const localMod = local.find((lm) => lm.id === rm.id);
             const localFolders = localMod ? localMod.tasks.filter((t) => t.isFolder) : [];
 
-            // Replace any remote task that corresponds to a local folder with the local folder (which contains children)
             const tasksFromRemote = rm.tasks.map((rt) => {
               const lf = localFolders.find((f) => f.id === rt.id);
               if (lf) return lf;
               return rt;
             });
 
-            // Add any local-only folders that don't exist in remote tasks
             for (const lf of localFolders) {
               if (!tasksFromRemote.some((t) => t.id === lf.id)) {
                 tasksFromRemote.push(lf);
@@ -339,17 +332,19 @@ export function useModules() {
             return { ...rm, tasks: tasksFromRemote };
           });
 
-          // Append local-only modules (modules that exist locally but not remotely)
           const localOnly = local.filter((lm) => !remoteModules.some((rm) => rm.id === lm.id));
           const finalModules = [...merged, ...localOnly];
 
           setModules(finalModules);
           writeStorage(finalModules);
         } catch {
-          // fallback to remote-only if merge fails
           setModules(remoteModules);
           writeStorage(remoteModules);
         }
+
+        setModulesLoading(false);
+      } else {
+        if (active) setModulesLoading(false);
       }
     };
 
@@ -360,12 +355,13 @@ export function useModules() {
     };
   }, [user]);
 
-  // Local-only operations (folders & nested children are kept client-side)
   const addModule = async (name: string) => {
     const newMod: ModuleItem = { id: genId("m-"), name: name || "Untitled Module", tasks: [] };
 
     if (user) {
-      const { error } = await supabase.from("modules").insert([{ id: newMod.id, user_id: user.id, name: newMod.name }]);
+      const { error } = await supabase
+          .from("modules")
+          .insert([{ id: newMod.id, user_id: user.id, name: newMod.name }]);
       if (error) {
         showError("Failed to create module in account");
         return;
@@ -385,7 +381,6 @@ export function useModules() {
   const deleteModule = async (id: string) => {
     if (user) {
       await supabase.from("modules").delete().eq("id", id).eq("user_id", user.id);
-      // Also attempt to delete tasks for this module (best-effort)
       await supabase.from("tasks").delete().eq("module_id", id);
     }
     setModules((s) => {
@@ -409,7 +404,6 @@ export function useModules() {
 
   const getModule = (id: string) => modules.find((m) => m.id === id);
 
-  // Add a folder to the module
   const addFolder = async (moduleId: string, folderName: string, folderWeight: number) => {
     const newFolder: Task = {
       id: genId("f-"),
@@ -421,16 +415,16 @@ export function useModules() {
       children: [],
     };
 
-    // Persist folder as a tasks row on the server so it survives reloads/sync
     if (user) {
-      await supabase.from("tasks").insert([{
-        id: newFolder.id,
-        module_id: moduleId,
-        name: newFolder.name,
-        grade: 0,
-        weight: newFolder.weight,
-      }]);
-      // ignore errors (best-effort)
+      await supabase.from("tasks").insert([
+        {
+          id: newFolder.id,
+          module_id: moduleId,
+          name: newFolder.name,
+          grade: 0,
+          weight: newFolder.weight,
+        },
+      ]);
     }
 
     setModules((s) => {
@@ -443,11 +437,10 @@ export function useModules() {
     return newFolder.id;
   };
 
-  // Add a task either at module root or inside a folder if parentFolderId provided
   const addTask = async (
-    moduleId: string,
-    task: { name: string; grade: number; weight: number },
-    parentFolderId?: string | null,
+      moduleId: string,
+      task: { name: string; grade: number; weight: number },
+      parentFolderId?: string | null,
   ) => {
     const newTask: Task = {
       id: genId("t-"),
@@ -460,14 +453,15 @@ export function useModules() {
     };
 
     if (user && !parentFolderId) {
-      // only persist root-level tasks to server; folder children are client-only (previous behavior)
-      const { error } = await supabase.from("tasks").insert([{
-        id: newTask.id,
-        module_id: moduleId,
-        name: newTask.name,
-        grade: newTask.grade,
-        weight: newTask.weight,
-      }]);
+      const { error } = await supabase.from("tasks").insert([
+        {
+          id: newTask.id,
+          module_id: moduleId,
+          name: newTask.name,
+          grade: newTask.grade,
+          weight: newTask.weight,
+        },
+      ]);
       if (error) {
         showError("Failed to create task in account");
         return;
@@ -475,19 +469,18 @@ export function useModules() {
     }
 
     if (user && parentFolderId) {
-      // If user is signed in and adding a child into a folder, store a representative task on the server
-      // with a name that indicates the folder relationship (keeps server schema simple).
       const mod = modules.find((m) => m.id === moduleId);
       const folder = mod?.tasks.find((t) => t.id === parentFolderId && t.isFolder);
       const serverName = folder ? `${folder.name} / ${newTask.name}` : newTask.name;
-      await supabase.from("tasks").insert([{
-        id: newTask.id,
-        module_id: moduleId,
-        name: serverName,
-        grade: newTask.grade,
-        weight: newTask.weight,
-      }]);
-      // ignore errors - best-effort
+      await supabase.from("tasks").insert([
+        {
+          id: newTask.id,
+          module_id: moduleId,
+          name: serverName,
+          grade: newTask.grade,
+          weight: newTask.weight,
+        },
+      ]);
     }
 
     setModules((s) => {
@@ -496,14 +489,13 @@ export function useModules() {
         if (!parentFolderId) {
           return { ...m, tasks: [...m.tasks, newTask] };
         }
-        // add inside folder
-        const tasks = mapTasksReplace(m.tasks, (t) => t.id === parentFolderId, (t) => {
+        const tasks2 = mapTasksReplace(m.tasks, (t) => t.id === parentFolderId, (t) => {
           if (!t) return t;
           if (!t.isFolder) return t;
           const children = [...(t.children || []), newTask];
           return { ...t, children };
         });
-        return { ...m, tasks };
+        return { ...m, tasks: tasks2 };
       });
       writeStorage(next);
       return next;
@@ -525,11 +517,11 @@ export function useModules() {
     setModules((s) => {
       const next = s.map((m) => {
         if (m.id !== moduleId) return m;
-        const tasks = mapTasksReplace(m.tasks, (t) => t.id === taskId, (t) => {
+        const tasks2 = mapTasksReplace(m.tasks, (t) => t.id === taskId, (t) => {
           if (!t) return t;
           return { ...t, ...updates };
         });
-        return { ...m, tasks };
+        return { ...m, tasks: tasks2 };
       });
       writeStorage(next);
       return next;
@@ -593,16 +585,13 @@ export function useModules() {
     setModules((s) => {
       const next = s.map((m) => {
         if (m.id !== moduleId) return m;
-        // remove matching top-level or nested tasks (delete the folder and its descendants)
         const filtered = (function walk(tasks: Task[]): Task[] {
           return tasks
-            .filter((t) => t.id !== taskId)
-            .map((t) => {
-              if (t.isFolder && t.children) {
-                return { ...t, children: walk(t.children) };
-              }
-              return t;
-            });
+              .filter((t) => t.id !== taskId)
+              .map((t) => {
+                if (t.isFolder && t.children) return { ...t, children: walk(t.children) };
+                return t;
+              });
         })(m.tasks);
         return { ...m, tasks: filtered };
       });
@@ -616,11 +605,11 @@ export function useModules() {
     setModules((s) => {
       const next = s.map((m) => {
         if (m.id !== moduleId) return m;
-        const tasks = mapTasksReplace(m.tasks, (t) => t.id === taskId, (t) => {
+        const tasks2 = mapTasksReplace(m.tasks, (t) => t.id === taskId, (t) => {
           if (!t) return t;
           return { ...t, excluded: !t.excluded };
         });
-        return { ...m, tasks };
+        return { ...m, tasks: tasks2 };
       });
       writeStorage(next);
       return next;
@@ -629,6 +618,7 @@ export function useModules() {
 
   return {
     modules,
+    modulesLoading,
     addModule,
     deleteModule,
     getModule,

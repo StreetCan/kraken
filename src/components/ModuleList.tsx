@@ -4,9 +4,10 @@ import { useModules, type Task } from "@/hooks/use-modules";
 import { Trash2, Plus } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import ContributionPieChart from "@/components/ContributionPieChart";
+import ModuleListSkeleton from "@/components/ModuleListSkeleton.tsx";
 
 const ModuleList: React.FC = () => {
-  const { modules, addModule, deleteModule } = useModules();
+  const { modules, modulesLoading, addModule, deleteModule } = useModules();
   const [name, setName] = React.useState("");
 
   const handleAdd = (e?: React.FormEvent) => {
@@ -82,7 +83,9 @@ const ModuleList: React.FC = () => {
         </form>
       </div>
 
-      {modules.length === 0 ? (
+      { modulesLoading ? (
+        <ModuleListSkeleton />
+      ) : modules.length === 0 ? (
         <div className="p-8 bg-card dark:bg-sidebar-accent rounded shadow text-center text-muted-foreground">
           No modules yet — add one to get started.
         </div>
